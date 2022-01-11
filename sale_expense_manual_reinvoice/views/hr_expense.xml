@@ -44,6 +44,11 @@
                         string="Discard"
                         confirm="Are you sure you don't want to reinvoice these expenses?"
                     />
+                    <button
+                        name="action_manual_reinvoice_pending"
+                        type="object"
+                        string="Mark to Reinvoice"
+                    />
                 </header>
                 <field name="date" readonly="1" optional="show" />
                 <field name="product_id" readonly="1" />

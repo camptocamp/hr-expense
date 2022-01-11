@@ -53,3 +53,7 @@ class HrExpense(models.Model):
     def action_manual_reinvoice_discard(self):
         self.analytic_line_ids.manual_reinvoice_discarded = True
         return True
+
+    def action_manual_reinvoice_pending(self):
+        self.analytic_line_ids.manual_reinvoice_discarded = False
+        return True
