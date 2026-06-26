@@ -10,7 +10,7 @@ class AccountAnalyticLine(models.Model):
     _inherit = "account.analytic.line"
 
     expense_id = fields.Many2one(
-        related="move_id.expense_id",
+        related="move_line_id.expense_id",
         store=True,
     )
     manual_reinvoice = fields.Boolean(
@@ -42,9 +42,9 @@ class AccountAnalyticLine(models.Model):
             )
         if any(rec.manual_reinvoice_done for rec in self):
             raise UserError(self.env._("Expense already re-invoiced."))
-        sale_lines_per_move_id = self.move_id._sale_create_reinvoice_sale_line()
+        sale_lines_per_move_id = self.move_line_id._sale_create_reinvoice_sale_line()
         for rec in self:
-            sale_line = sale_lines_per_move_id.get(rec.move_id.id)
+            sale_line = sale_lines_per_move_id.get(rec.move_line_id.id)
             if sale_line:
                 rec.so_line = sale_line
             if rec.manual_reinvoice_discarded:
