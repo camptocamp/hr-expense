@@ -16,6 +16,8 @@ class TestReInvoiceManual(TestExpenseCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # Needed to create sale.order records below
+        cls.env.user.group_ids |= cls.env.ref("sales_team.group_sale_salesman")
         cls.product_expense_auto = cls.env["product.product"].create(
             {
                 "name": "Expense Auto (default)",
@@ -33,26 +35,24 @@ class TestReInvoiceManual(TestExpenseCommon):
             }
         )
         cls.order = cls.env["sale.order"].create({"partner_id": cls.partner_a.id})
-        cls.order._create_analytic_account()
         cls.order.action_confirm()
-        cls.expense_sheet = cls.env["hr.expense.sheet"].create(
-            {
-                "name": "Expense Sheet",
-                "employee_id": cls.expense_employee.id,
-                "journal_id": cls.company_data["default_journal_purchase"].id,
-                "accounting_date": fields.Date.today(),
-            }
-        )
         cls.expense = cls.env["hr.expense"].create(
             {
-                "sheet_id": cls.expense_sheet.id,
                 "employee_id": cls.expense_employee.id,
                 "name": "Expense",
                 "date": fields.Date.today(),
                 "product_id": cls.product_expense_manual.id,
-                "unit_amount": cls.product_expense_manual.lst_price,
+                "total_amount": cls.product_expense_manual.lst_price,
                 "sale_order_id": cls.order.id,
             }
+        )
+
+    def _approve_and_post(self, expense):
+        expense.action_approve()
+        self.post_expenses_with_wizard(
+            expense,
+            journal=self.company_data["default_journal_purchase"],
+            date=fields.Date.today(),
         )
 
     def _get_expenses_to_reinvoice(self, with_discarded=False):
@@ -66,8 +66,7 @@ class TestReInvoiceManual(TestExpenseCommon):
 
     def test_expense_manual_reinvoice(self):
         """Test the full manual reinvoice flow"""
-        self.expense_sheet.approve_expense_sheets()
-        self.expense_sheet.action_sheet_move_create()
+        self._approve_and_post(self.expense)
         self.assertTrue(self.expense.manual_reinvoice)
         self.assertFalse(self.order.order_line, "No expense should've been created yet")
         # Check the re-invoice menu
@@ -87,15 +86,14 @@ class TestReInvoiceManual(TestExpenseCommon):
     def test_expense_manual_reinvoice_without_sale_order(self):
         """Test case without sale order on hr.expense"""
         self.expense.sale_order_id = False
-        self.expense.analytic_account_id = self.order.analytic_account_id
-        self.expense_sheet.approve_expense_sheets()
-        self.expense_sheet.action_sheet_move_create()
+        self.expense.analytic_distribution = {str(self.analytic_account_1.id): 100}
+        self._approve_and_post(self.expense)
         self.assertFalse(self.order.order_line, "No expense should've been created yet")
-        # Check the re-invoice menu
-        self.assertIn(
+        # The re-invoice menu requires sale_order_id to be set
+        self.assertNotIn(
             self._get_expenses_to_reinvoice(),
             self.expense,
-            "The expense should've been found in the to re-invoice menu",
+            "The expense shouldn't have been found in the to re-invoice menu yet",
         )
         # Check that we can't re-invoice without the user filling the targeted order id
         error_message = (
@@ -113,9 +111,8 @@ class TestReInvoiceManual(TestExpenseCommon):
     def test_expense_auto_reinvoice(self):
         """Test that the normal flow still works"""
         self.expense.product_id = self.product_expense_auto
-        self.expense.unit_amount = 1500.0  # amount resets after product change
-        self.expense_sheet.approve_expense_sheets()
-        self.expense_sheet.action_sheet_move_create()
+        self.expense.total_amount = 1500.0  # amount resets after product change
+        self._approve_and_post(self.expense)
         self.assertFalse(self.expense.manual_reinvoice)
         self.assertTrue(self.order.order_line, "The expense should've been reinvoiced")
         # Check the re-invoice menu
@@ -132,8 +129,7 @@ class TestReInvoiceManual(TestExpenseCommon):
             self.expense.action_manual_reinvoice()
 
     def test_expense_manual_reinvoice_discard(self):
-        self.expense_sheet.approve_expense_sheets()
-        self.expense_sheet.action_sheet_move_create()
+        self._approve_and_post(self.expense)
         # Check the re-invoice menu
         self.assertIn(
             self._get_expenses_to_reinvoice(),

@@ -5,7 +5,6 @@
     License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 -->
 <odoo>
-
     <record id="product_product_view_form_inherit_sale_expense" model="ir.ui.view">
         <field name="model">product.product</field>
         <field
@@ -17,10 +16,9 @@
                 <field
                     name="expense_mode"
                     widget="radio"
-                    attrs="{'invisible': [('expense_policy', 'in', (False, 'no'))]}"
+                    invisible="expense_policy in (False, 'no')"
                 />
             </field>
         </field>
     </record>
-
 </odoo>
