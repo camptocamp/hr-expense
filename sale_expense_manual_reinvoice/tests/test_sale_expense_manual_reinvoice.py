@@ -16,6 +16,8 @@ class TestReInvoiceManual(TestExpenseCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # Needed to create sale.order records below
+        cls.env.user.group_ids |= cls.env.ref("sales_team.group_sale_salesman")
         cls.product_expense_auto = cls.env["product.product"].create(
             {
                 "name": "Expense Auto (default)",
