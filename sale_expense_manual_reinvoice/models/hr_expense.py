@@ -2,7 +2,7 @@
 # @author Iván Todorovich <ivan.todorovich@camptocamp.com>
 # License AGPL-3.0 or later (https://www.gnu.org/licenses/agpl).
 
-from odoo import _, api, fields, models
+from odoo import api, fields, models
 from odoo.exceptions import UserError
 
 
@@ -28,22 +28,18 @@ class HrExpense(models.Model):
     )
     def _compute_manual_reinvoice(self):
         for rec in self:
+            analytic_line = rec.analytic_line_ids[:1]
             for fname in [
                 "manual_reinvoice",
                 "manual_reinvoice_done",
                 "manual_reinvoice_discarded",
             ]:
-                rec[fname] = fields.first(rec.analytic_line_ids)[fname]
-
-    def _compute_analytic_account_id(self):
-        # OVERRIDE to not recompute account_analytic_id if it's already posted
-        editable = self.filtered("is_editable")
-        return super(HrExpense, editable)._compute_analytic_account_id()
+                rec[fname] = analytic_line[fname] if analytic_line else False
 
     def action_manual_reinvoice(self):
         if any(not rec.sale_order_id for rec in self):
             raise UserError(
-                _(
+                self.env._(
                     "Some expenses are missing the Customer to Reinvoice, "
                     "please fill this field on all lines and try again."
                 )
