@@ -19,11 +19,14 @@ class SaleOrderLine(models.Model):
         at_cost_prices = {
             line.id: line.purchase_price for line in at_cost_expense_lines
         }
-        super()._compute_purchase_price()
+        res = super()._compute_purchase_price()
         for line in at_cost_expense_lines:
             line = line.with_company(line.company_id)
             product_cost = at_cost_prices.get(line.id)
-            line.purchase_price = line._convert_price(
-                product_cost, line.product_id.uom_id
+            product_cost = line.product_id.uom_id._compute_price(
+                product_cost, line.product_uom_id
             )
-        return
+            line.purchase_price = line._convert_to_sol_currency(
+                product_cost, line.product_id.cost_currency_id
+            )
+        return res
