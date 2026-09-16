@@ -12,6 +12,8 @@ class TestReInvoiceCost(TestExpenseCommon):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
+        # Needed to create sale.order records below
+        cls.env.user.group_ids |= cls.env.ref("sales_team.group_sale_salesman")
         cls.product_expense_at_cost = cls.env["product.product"].create(
             {
                 "name": "Expense Cost",
