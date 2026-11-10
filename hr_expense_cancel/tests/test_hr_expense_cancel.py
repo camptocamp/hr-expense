@@ -65,7 +65,10 @@ class TestHrExpenseCancel(TestExpenseCommon):
         payments = self.expense.account_move_id.reconciled_payment_ids
         self.assertTrue(payments)
         self.expense.account_move_id.line_ids.remove_move_reconcile()
-        self.assertFalse(self.expense.account_move_id.reconciled_payment_ids)
+        # The 19.0 field retains explicitly linked payments even when
+        # their journal lines are no longer reconciled to this expense.
+        self.assertIn(payments, self.expense.account_move_id.reconciled_payment_ids)
+        self.assertFalse(self.expense.account_move_id._get_reconciled_payments())
         self.expense.action_reset()
         self.assertEqual(self.expense.state, "draft")
         self.assertTrue(payments.exists())
