@@ -15,7 +15,9 @@ class HrExpense(models.Model):
             moves = expense.account_move_id
             if not moves:
                 continue
-            payments = moves.reconciled_payment_ids.filtered(
+            # In 19.0 reconciled_payment_ids also includes explicitly linked
+            # payments after unreconciliation. Only cancel actual counterparts.
+            payments = moves._get_reconciled_payments().filtered(
                 lambda p: p.state != "canceled"
             )
             self._remove_reconcile_hr_invoice(moves)
